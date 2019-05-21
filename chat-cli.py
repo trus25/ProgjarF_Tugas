@@ -12,6 +12,7 @@ class ChatClient:
         self.server_address = (TARGET_IP,TARGET_PORT)
         self.sock.connect(self.server_address)
         self.tokenid=""
+        self.currentclient=""
 
     def proses(self,cmdline):
         j=cmdline.strip().split(" ")
@@ -31,6 +32,7 @@ class ChatClient:
                 return self.inbox()
             elif (command=='logout'):
                 self.tokenid=""
+                print "logout berhasil"
                 return self.tokenid
             elif (command == 'join_group'):
                 group_token = j[1]
@@ -109,22 +111,22 @@ class ChatClient:
     def send_file(self, usernameto, filename):
         if (self.tokenid==""):
             return "Error, not authorized"
+
         string="send_file {} {} {} \r\n" . format(self.tokenid, usernameto, filename)
-        result = self.sendstring(string)
-
+        self.sock.sendall(string)
+        try:
+            with open(filename, 'rb') as file:
+                while True:
+                    bytes = file.read(1024)
+                    if not bytes:
+                        result = self.sendstring("DONE")
+                        break
+                    self.sock.sendall(bytes)
+                file.close()
+        except IOError:
+            return "Error, file not found"
         if result['status']=='OK':
-            return "message sent to {}" . format(usernameto)
-        else:
-            return "Error, {}" . format(result['message'])
-    def logout(self):
-        if (self.tokenid==""):
-            return "Error, not authorized"
-        string = "logout {} \r\n" . format(self.tokenid)
-        result = self.sendstring(string)
-
-        if result['status']=='OK':
-            self.tokenid = ""
-            return "{}" . format(result['message'])
+            return "{} successfully sent to {}" . format(filename,usernameto)
         else:
             return "Error, {}" . format(result['message'])
 
@@ -162,15 +164,17 @@ class ChatClient:
             return "Error, {}" . format(result['message'])
 
     def inbox_group(self, group_token):
-        if (self.tokenid==""):
+        if (self.tokenid == ""):
             return "Error, not authorized"
-        string = "inbox_group {} {} \r\n" . format(self.tokenid, group_token)
+        string = "inbox_group {} {} \r\n".format(self.tokenid, group_token)
         result = self.sendstring(string)
 
-        if result['status']=='OK':
-            return "{}" . format(json.dumps(result['messages']))
+        if result['status'] == 'OK':
+            for i in result['message']:
+                print i
+            return ""
         else:
-            return "Error, {}" . format(result['message'])
+            return "Error, {}".format(result['message'])
 
     def list_group(self, group_token):
         if (self.tokenid==""):
@@ -188,6 +192,7 @@ class ChatClient:
             return "Error, not authorized"
         string = "send_group {} {} {} \r\n" . format(self.tokenid, group_token, message)
         result = self.sendstring(string)
+        print result
 
         if result['status']=='OK':
             return "{}" . format(result['message'])

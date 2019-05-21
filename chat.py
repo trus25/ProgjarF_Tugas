@@ -2,6 +2,7 @@ import sys
 import os
 import json
 import uuid
+import datetime
 from Queue import *
 
 class Chat:
@@ -15,7 +16,7 @@ class Chat:
         self.users['Jadid'] = {'nama': 'Achmad Jadid', 'negara': 'Inggris', 'password': 'surabaya','group': 'progjar', 'incoming': {}, 'outgoing': {}}
         self.groups['grupan'] = {'group_name': 'Testing', 'group_token': 'test', 'admin': 'messi', 'incoming': [],'users': ['messi', 'henderson', 'lineker']}
 
-    def proses(self,data):
+    def proses(self,data,connection):
         j=data.strip().split(" ")
         try:
             command=j[0]
@@ -49,13 +50,7 @@ class Chat:
                 filename = j[3]
                 usernamefrom = self.sessions[sessionid]['username']
                 print "send_file from {} to {}".format(usernamefrom, usernameto)
-                return self.send_file(sessionid, usernamefrom, usernameto, filename)
-
-            elif (command == 'logout'):
-                sessionid = j[1]
-                username = self.sessions[sessionid]['username']
-                print "{} {}".format(command, username)
-                return self.logout(sessionid)
+                return self.send_file(sessionid, usernamefrom, usernameto, filename,connection)
 
             elif (command == 'create_group'):
                 sessionid = j[1]
@@ -87,6 +82,7 @@ class Chat:
             elif (command == 'inbox_group'):
                 sessionid = j[1]
                 group_token = j[2]
+                print "123"
                 print "{} {}".format(command, group_token)
                 return self.inbox_group(group_token, sessionid)
 
@@ -107,7 +103,7 @@ class Chat:
             return { 'status': 'ERROR', 'message': 'Password Salah' }
         tokenid = str(uuid.uuid4()) 
         self.sessions[tokenid]={ 'username': username, 'userdetail':self.users[username]}
-        return { 'status': 'OK', 'tokenid': tokenid }
+        return { 'status': 'OK', 'tokenid': tokenid}
     def get_user(self,username):
         if (username not in self.users):
             return False
@@ -144,10 +140,10 @@ class Chat:
             msgs[users]=[]
             while not incoming[users].empty():
                 msgs[users].append(s_fr['incoming'][users].get_nowait())
-            
+
         return {'status': 'OK', 'messages': msgs}
 
-    def send_file(self, sessionid, username_from, username_dest, filename):
+    def send_file(self, sessionid, username_from, username_dest, filename, connection):
         if (sessionid not in self.sessions):
             return {'status': 'ERROR', 'message': 'Session Tidak Ditemukan'}
         s_fr = self.get_user(username_from)
@@ -156,11 +152,37 @@ class Chat:
         if (s_fr == False or s_to == False):
             return {'status': 'ERROR', 'message': 'User Tidak Ditemukan'}
 
-        return {'status': 'OK', 'message': 'Message Sent'}
+        try:
+            if not os.path.exists(username_dest):
+                os.makedirs(username_dest)
+            with open(os.path.join(username_dest, filename), 'wb') as file:
+                while True:
+                    data = connection.recv(1024)
+                    if (data[-4:] == 'DONE'):
+                        data = data[:-4]
+                        file.write(data)
+                        break
+                    file.write(data)
+                file.close()
+        except IOError:
+            raise
 
-    def logout(self, tokenid):
-        self.sessions[tokenid] = None
-        return {'status': 'OK', 'message': 'Logout succeed'}
+        message = {'msg_from': s_fr['nama'], 'msg_to': s_to['nama'], 'msg': 'sent/received {}'.format(filename)}
+        outqueue_sender = s_fr['outgoing']
+        inqueue_receiver = s_to['incoming']
+
+
+        try:
+            outqueue_sender[username_from].put(message)
+        except KeyError:
+            outqueue_sender[username_from] = Queue()
+            outqueue_sender[username_from].put(message)
+        try:
+            inqueue_receiver[username_from].put(message)
+        except KeyError:
+            inqueue_receiver[username_from] = Queue()
+            inqueue_receiver[username_from].put(message)
+        return {'status': 'OK', 'message': 'Message Sent'}
 
     def join_group(self, group_token, sessionid):
         username = self.sessions[sessionid]['username']
@@ -222,8 +244,18 @@ class Chat:
 
         return {'status': 'OK', 'message': self.groups[group_token]['users']}
 
-if __name__=="__main__":
-    j = Chat()
+    def inbox_group(self, group_token, sessionid):
+        if (group_token not in self.groups):
+            return {'status': 'Err', 'message': '404 Group not found'}
+
+        username = self.sessions[sessionid]['username']
+        if username not in self.groups[group_token]['users']:
+            return {'status': 'Err', 'message': 'You are not group member'}
+
+        return {'status': 'OK', 'message': self.groups[group_token]['incoming']}
+
+#if __name__=="__main__":
+#    j = Chat()
     #    sesi = j.proses("auth messi surabaya")
     #print sesi
     #sesi = j.autentikasi_user('messi','surabaya')
