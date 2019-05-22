@@ -5,7 +5,7 @@ auth (nama user) (password)
 
 - __Send Message__ 
   - mengirim pesan ke user lain
-  - send_message (nama user yang dituju) (isi pesan)
+  - send (nama user yang dituju) (isi pesan)
 
 - __Inbox__
   - melihat pesan masuk yang diterima oleh user
