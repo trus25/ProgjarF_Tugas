@@ -13,7 +13,8 @@ class Chat:
         self.users['messi']={ 'nama': 'Lionel Messi', 'negara': 'Argentina', 'password': 'surabaya', 'group': 'progjar', 'incoming' : {}, 'outgoing': {}}
         self.users['henderson']={ 'nama': 'Jordan Henderson', 'negara': 'Inggris', 'password': 'surabaya', 'group': 'progjar', 'incoming': {}, 'outgoing': {}}
         self.users['lineker']={ 'nama': 'Gary Lineker', 'negara': 'Inggris', 'password': 'surabaya', 'group': 'progjar', 'incoming': {}, 'outgoing':{}}
-        self.users['Jadid'] = {'nama': 'Achmad Jadid', 'negara': 'Inggris', 'password': 'surabaya','group': 'progjar', 'incoming': {}, 'outgoing': {}}
+        self.users['Jadid'] = {'nama': 'Achmad Jadid', 'negara': 'Indonesia', 'password': 'surabaya','group': 'progjar', 'incoming': {}, 'outgoing': {}}
+        self.users['renaldi'] = {'nama': 'Achmad Jadid', 'negara': 'Indonesia', 'password': 'surabaya','group': 'progjar', 'incoming': {}, 'outgoing': {}}
         self.groups['grupan'] = {'group_name': 'Testing', 'group_token': 'test', 'admin': 'messi', 'incoming': [],'users': ['messi', 'henderson', 'lineker']}
 
     def proses(self,data,connection):
